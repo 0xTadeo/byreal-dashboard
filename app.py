@@ -293,35 +293,42 @@ for col, (label, value, change) in zip(mcols, market_items):
         """, unsafe_allow_html=True)
 
 # ━━━━ 业务线 ━━━━
-st.markdown('<div class="section-title">📦 业务线分布</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">📦 业务线分布（点击展开查看池子详情）</div>', unsafe_allow_html=True)
 
 biz = data.get("bizLines", {})
-biz_rows = []
+all_pools = data.get("pools", [])
+
 for key in ["xStocks", "Gold_RWA", "Major", "Stablecoin", "Other"]:
     b = biz.get(key)
-    if b and b["tvl"] > 0:
-        share = b["tvl"] / p["tvl"] * 100 if p["tvl"] > 0 else 0
-        biz_rows.append({
-            "业务线": key,
-            "TVL": fmt_usd(b["tvl"]),
-            "占比": f"{share:.1f}%",
-            "24h Vol": fmt_usd(b["vol24h"]),
-            "24h Fee": fmt_usd(b["fee24h"]),
-            "池数": b["count"],
-        })
-
-if biz_rows:
-    biz_html = '<table class="pool-table"><tr>'
-    for h in biz_rows[0].keys():
-        biz_html += f'<th>{h}</th>'
-    biz_html += '</tr>'
-    for row in biz_rows:
-        biz_html += '<tr>'
-        for v in row.values():
-            biz_html += f'<td>{v}</td>'
-        biz_html += '</tr>'
-    biz_html += '</table>'
-    st.markdown(biz_html, unsafe_allow_html=True)
+    if not b or b["tvl"] <= 0:
+        continue
+    share = b["tvl"] / p["tvl"] * 100 if p["tvl"] > 0 else 0
+    
+    header = f"**{key}** — TVL {fmt_usd(b['tvl'])} ({share:.1f}%) | Vol {fmt_usd(b['vol24h'])} | Fee {fmt_usd(b['fee24h'])} | {b['count']}池"
+    
+    with st.expander(header):
+        # 该业务线下的池子，按 TVL 降序
+        cat_pools = sorted(
+            [pool for pool in all_pools if pool.get("biz") == key],
+            key=lambda x: x["tvl"], reverse=True
+        )
+        if cat_pools:
+            rows_html = '<table class="pool-table"><tr><th>交易对</th><th>TVL</th><th>24h Vol</th><th>24h Fee</th><th>APR</th><th>价格</th><th>24h 变化</th></tr>'
+            for pool in cat_pools:
+                chg = pool.get("pc1d", 0)
+                if chg:
+                    chg_color = "#10b981" if chg >= 0 else "#ef4444"
+                    chg_str = f'<span style="color:{chg_color}">{"▲" if chg >= 0 else "▼"} {abs(chg)*100:.1f}%</span>'
+                else:
+                    chg_str = "—"
+                apr_str = f"{pool['apr']*100:.1f}%" if pool.get("apr") else "—"
+                px_str = f"${pool['px']:.2f}" if pool["px"] < 1000 else f"${pool['px']:,.0f}" if pool["px"] > 0 else "—"
+                
+                rows_html += f'<tr><td>{pool["name"]}</td><td>{fmt_usd(pool["tvl"])}</td><td>{fmt_usd(pool["v24h"])}</td><td>{fmt_usd(pool["f24h"])}</td><td>{apr_str}</td><td>{px_str}</td><td>{chg_str}</td></tr>'
+            rows_html += '</table>'
+            st.markdown(rows_html, unsafe_allow_html=True)
+        else:
+            st.write("暂无池子数据")
 
 # ━━━━ 竞品对比 ━━━━
 st.markdown('<div class="section-title">🏆 竞品对比</div>', unsafe_allow_html=True)
@@ -442,6 +449,85 @@ if top_vol:
         vol_html += '</tr>'
     vol_html += '</table>'
     st.markdown(vol_html, unsafe_allow_html=True)
+
+# ━━━━ 历史趋势 ━━━━
+st.markdown('<div class="section-title">📈 历史趋势</div>', unsafe_allow_html=True)
+
+@st.cache_data(ttl=300)
+def load_history():
+    """加载所有历史 summary.json"""
+    history = []
+    if not DATA_DIR.exists():
+        return history
+    for d in sorted(DATA_DIR.iterdir()):
+        if d.is_dir() and d.name != "latest" and not d.name.startswith("."):
+            sf = d / "summary.json"
+            if sf.exists():
+                try:
+                    with open(sf) as f:
+                        s = json.load(f)
+                    plat = s.get("platform", {})
+                    blines = s.get("bizLines", {})
+                    row = {
+                        "日期": s.get("date", d.name),
+                        "TVL": plat.get("tvl", 0),
+                        "24h Vol": plat.get("vol24h", 0),
+                        "24h Fee": plat.get("fee24h", 0),
+                        "活跃池": plat.get("active", 0),
+                    }
+                    # 各业务线 TVL
+                    for bk in ["xStocks", "Gold_RWA", "Major", "Stablecoin", "Other"]:
+                        row[f"{bk} TVL"] = blines.get(bk, {}).get("tvl", 0)
+                    history.append(row)
+                except Exception:
+                    pass
+    return history
+
+hist = load_history()
+if len(hist) >= 2:
+    import altair as alt
+    
+    df = pd.DataFrame(hist)
+    df["日期"] = pd.to_datetime(df["日期"])
+    
+    trend_tab1, trend_tab2, trend_tab3 = st.tabs(["TVL & Volume", "业务线 TVL", "Fee & 活跃池"])
+    
+    with trend_tab1:
+        base = alt.Chart(df).encode(x=alt.X("日期:T", title=""))
+        tvl_line = base.mark_line(color="#22d3ee", strokeWidth=2).encode(
+            y=alt.Y("TVL:Q", title="TVL ($)", axis=alt.Axis(format="~s"))
+        )
+        vol_line = base.mark_line(color="#a78bfa", strokeWidth=2, strokeDash=[4,2]).encode(
+            y=alt.Y("24h Vol:Q", title="")
+        )
+        st.altair_chart(
+            alt.layer(tvl_line, vol_line).properties(height=300).configure_view(strokeWidth=0).configure(background="#0a0e17").configure_axis(labelColor="#94a3b8", titleColor="#94a3b8", gridColor="#1e293b"),
+            use_container_width=True
+        )
+        st.caption("🔵 TVL · 🟣 24h Volume")
+    
+    with trend_tab2:
+        biz_cols = [c for c in df.columns if c.endswith(" TVL")]
+        if biz_cols:
+            df_biz = df.melt(id_vars=["日期"], value_vars=biz_cols, var_name="业务线", value_name="TVL")
+            chart = alt.Chart(df_biz).mark_area(opacity=0.7).encode(
+                x=alt.X("日期:T", title=""),
+                y=alt.Y("TVL:Q", title="TVL ($)", stack=True, axis=alt.Axis(format="~s")),
+                color=alt.Color("业务线:N", scale=alt.Scale(scheme="tableau10")),
+            ).properties(height=300).configure_view(strokeWidth=0).configure(background="#0a0e17").configure_axis(labelColor="#94a3b8", titleColor="#94a3b8", gridColor="#1e293b")
+            st.altair_chart(chart, use_container_width=True)
+    
+    with trend_tab3:
+        fee_chart = alt.Chart(df).mark_bar(color="#10b981", opacity=0.8).encode(
+            x=alt.X("日期:T", title=""),
+            y=alt.Y("24h Fee:Q", title="24h Fee ($)", axis=alt.Axis(format="~s")),
+        ).properties(height=300).configure_view(strokeWidth=0).configure(background="#0a0e17").configure_axis(labelColor="#94a3b8", titleColor="#94a3b8", gridColor="#1e293b")
+        st.altair_chart(fee_chart, use_container_width=True)
+
+elif len(hist) == 1:
+    st.info("📊 趋势图需要至少 2 天数据，明天就能看到了")
+else:
+    st.info("📊 暂无历史数据")
 
 # Footer
 st.markdown("""
