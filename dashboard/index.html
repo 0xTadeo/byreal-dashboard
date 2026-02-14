@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Byreal Ops Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg-base: #0a0e17;
+    --bg-card: #111827;
+    --bg-card-alt: #151d2e;
+    --bg-hover: #1c2840;
+    --border: #1e293b;
+    --border-glow: #22d3ee20;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent: #22d3ee;
+    --accent-dim: #22d3ee40;
+    --green: #10b981;
+    --green-dim: #10b98130;
+    --red: #ef4444;
+    --red-dim: #ef444430;
+    --orange: #f59e0b;
+    --orange-dim: #f59e0b30;
+    --purple: #a78bfa;
+    --pink: #f472b6;
+    --blue: #60a5fa;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 0 0 var(--accent-dim); }
+    50% { box-shadow: 0 0 20px 4px var(--accent-dim); }
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .fade-up { animation: fadeUp 0.4s ease-out both; }
+  .delay-1 { animation-delay: 0.05s; }
+  .delay-2 { animation-delay: 0.1s; }
+  .delay-3 { animation-delay: 0.15s; }
+  .delay-4 { animation-delay: 0.2s; }
+  .delay-5 { animation-delay: 0.25s; }
+
+  .loading-shimmer {
+    background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-card-alt) 50%, var(--bg-card) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  /* Layout */
+  .dash-container {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 20px 24px 40px;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .header-logo {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px; color: #fff;
+  }
+  .header-title { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+  .header-date { color: var(--text-muted); font-size: 13px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    animation: pulse-glow 2s infinite;
+  }
+  .status-text { color: var(--text-muted); font-size: 12px; }
+
+  /* Market bar */
+  .market-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .market-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 13px;
+    flex: 1;
+    min-width: 160px;
+  }
+  .market-chip .label { color: var(--text-muted); font-weight: 500; }
+  .market-chip .price { font-weight: 600; }
+  .market-chip .change { font-size: 12px; font-weight: 500; }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--border-glow); }
+  .card-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .icon { font-size: 15px; }
+
+  /* Grid */
+  .grid-kpi {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+  .kpi-label { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .kpi-value { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .kpi-sub { font-size: 12px; margin-top: 4px; font-weight: 500; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+
+  @media (max-width: 1200px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 768px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .market-bar { flex-direction: column; }
+    .dash-container { padding: 12px 14px 32px; }
+  }
+
+  /* Table */
+  .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .tbl th {
+    text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+  .tbl td {
+    padding: 10px 10px; border-bottom: 1px solid #1e293b20;
+    vertical-align: middle;
+  }
+  .tbl tr:hover td { background: var(--bg-hover); }
+  .tbl .rank {
+    width: 28px; height: 28px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    background: var(--bg-card-alt); color: var(--text-muted);
+  }
+  .tbl .rank.top1 { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #000; }
+  .tbl .rank.top2 { background: var(--text-muted); color: #000; }
+  .tbl .rank.top3 { background: #cd7f32; color: #000; }
+
+  /* Alert */
+  .alert-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 14px; border-radius: 10px; margin-bottom: 8px;
+    font-size: 13px; line-height: 1.5;
+  }
+  .alert-red { background: var(--red-dim); border: 1px solid #ef444440; }
+  .alert-orange { background: var(--orange-dim); border: 1px solid #f59e0b40; }
+  .alert-green { background: var(--green-dim); border: 1px solid #10b98140; }
+  .alert-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+
+  /* Sparkline */
+  .spark-container { display: flex; align-items: center; gap: 6px; }
+
+  /* Tabs */
+  .tab-row { display: flex; gap: 4px; margin-bottom: 16px; }
+  .tab-btn {
+    padding: 6px 14px; border-radius: 8px; border: none;
+    background: transparent; color: var(--text-muted);
+    font-size: 12px; font-weight: 500; cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    transition: all 0.15s;
+  }
+  .tab-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
+  .tab-btn.active { background: var(--accent); color: #000; font-weight: 600; }
+
+  /* Pill */
+  .pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  }
+  .pill-up { background: var(--green-dim); color: var(--green); }
+  .pill-down { background: var(--red-dim); color: var(--red); }
+  .pill-neutral { background: var(--bg-card-alt); color: var(--text-muted); }
+
+  /* Biz cards */
+  .biz-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .biz-card {
+    background: var(--bg-card-alt);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .biz-card-name { font-size: 14px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .biz-card-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+  .biz-card-val { font-weight: 600; color: var(--text-primary); }
+
+  /* Competitor bar */
+  .comp-bar {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+  .comp-bar-name { width: 90px; font-size: 12px; font-weight: 500; color: var(--text-secondary); text-align: right; }
+  .comp-bar-track { flex: 1; height: 24px; background: var(--bg-card-alt); border-radius: 6px; overflow: hidden; position: relative; }
+  .comp-bar-fill { height: 100%; border-radius: 6px; transition: width 0.6s ease; display: flex; align-items: center; padding-left: 8px; font-size: 11px; font-weight: 600; }
+  .comp-bar-val { font-size: 12px; width: 70px; text-align: right; color: var(--text-muted); }
+
+  /* Section title */
+  .section-title {
+    font-size: 17px; font-weight: 600; margin-bottom: 16px; margin-top: 8px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title .line { flex: 1; height: 1px; background: var(--border); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useMemo } = React;
+const { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } = Recharts;
+
+// ============================================================
+// Utility
+// ============================================================
+const fmt = (v, pre = "$") => {
+  if (v == null || isNaN(v)) return "—";
+  if (v >= 1e9) return `${pre}${(v/1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `${pre}${(v/1e6).toFixed(2)}M`;
+  if (v >= 1e3) return `${pre}${(v/1e3).toFixed(1)}K`;
+  return `${pre}${v.toFixed(0)}`;
+};
+
+const fmtPct = (v) => {
+  if (v == null || isNaN(v)) return "—";
+  const abs = Math.abs(v * 100).toFixed(1);
+  return v >= 0 ? `+${abs}%` : `-${abs}%`;
+};
+
+const chgColor = (v) => !v ? "var(--text-muted)" : v >= 0 ? "var(--green)" : "var(--red)";
+const chgClass = (v) => !v ? "pill-neutral" : v >= 0 ? "pill-up" : "pill-down";
+const chgArrow = (v) => !v ? "" : v >= 0 ? "▲" : "▼";
+
+const BIZ_COLORS = {
+  xStocks: "#22d3ee",
+  Gold_RWA: "#fbbf24",
+  Major: "#60a5fa",
+  Stablecoin: "#a78bfa",
+  Other: "#64748b",
+};
+const BIZ_LABELS = {
+  xStocks: "xStocks",
+  Gold_RWA: "黄金/RWA",
+  Major: "主流交易对",
+  Stablecoin: "稳定币",
+  Other: "Meme/其他",
+};
+const BIZ_ICONS = {
+  xStocks: "📈",
+  Gold_RWA: "🪙",
+  Major: "💎",
+  Stablecoin: "🔄",
+  Other: "🎭",
+};
+
+const COMP_COLORS = {
+  byreal: "var(--accent)",
+  raydium: "#a78bfa",
+  meteora: "#60a5fa",
+  orca: "#f472b6",
+  pumpswap: "#fbbf24",
+};
+
+// ============================================================
+// Mini Sparkline
+// ============================================================
+const Sparkline = ({ data, color = "var(--accent)", w = 80, h = 28 }) => {
+  if (!data || data.length < 2) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * w;
+    const y = h - ((v - min) / range) * (h - 4) - 2;
+    return `${x},${y}`;
+  }).join(" ");
+
+  return (
+    <svg width={w} height={h} style={{ flexShrink: 0 }}>
+      <polyline fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={points} />
+    </svg>
+  );
+};
+
+// ============================================================
+// Components
+// ============================================================
+const KpiCard = ({ label, value, sub, subColor, delay = 0 }) => (
+  <div className={`kpi-card fade-up delay-${delay}`}>
+    <div className="kpi-label">{label}</div>
+    <div className="kpi-value mono">{value}</div>
+    {sub && <div className="kpi-sub" style={{ color: subColor || "var(--text-muted)" }}>{sub}</div>}
+  </div>
+);
+
+const MarketBar = ({ market }) => {
+  if (!market) return null;
+  const items = [
+    { label: "SOL", data: market.sol },
+    { label: "BTC", data: market.btc },
+    { label: "ETH", data: market.eth },
+    { label: "Fear & Greed", data: market.fearGreed },
+  ];
+  return (
+    <div className="market-bar fade-up">
+      {items.map((it, i) => {
+        if (it.label === "Fear & Greed") {
+          const v = it.data?.value ?? 0;
+          const fg_color = v < 25 ? "var(--red)" : v < 45 ? "var(--orange)" : v < 55 ? "var(--text-muted)" : v < 75 ? "var(--green)" : "var(--accent)";
+          return (
+            <div key={i} className="market-chip">
+              <span className="label">{it.label}</span>
+              <span className="mono price" style={{ color: fg_color }}>{v}</span>
+              <span style={{ color: fg_color, fontSize: 11 }}>{it.data?.label}</span>
+            </div>
+          );
+        }
+        const chg = it.data?.change24h ?? 0;
+        return (
+          <div key={i} className="market-chip">
+            <span className="label">{it.label}</span>
+            <span className="mono price">${it.data?.price?.toLocaleString(undefined, {maximumFractionDigits: it.label === "BTC" ? 0 : 2}) ?? "—"}</span>
+            <span className="change" style={{ color: chgColor(chg/100) }}>{chg >= 0 ? "+" : ""}{chg?.toFixed(1)}%</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const AlertPanel = ({ alerts }) => {
+  if (!alerts || !alerts.length) return <div style={{color: "var(--text-muted)", fontSize: 13}}>无预警</div>;
+  return (
+    <div>
+      {alerts.map((a, i) => (
+        <div key={i} className={`alert-row alert-${a.lv}`}>
+          <div className="alert-dot" style={{ background: `var(--${a.lv})` }} />
+          <div>
+            <span style={{ opacity: 0.7, fontSize: 11, marginRight: 6 }}>[{a.cat}]</span>
+            {a.msg}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const PoolTable = ({ pools, metric = "tvl", limit = 10 }) => {
+  const metricLabel = { tvl: "TVL", v24h: "24h 交易量", ftv: "Fee/TVL", apr: "APR" }[metric] || metric;
+  const fmtVal = (p) => {
+    if (metric === "apr") return `${(p.apr * 100).toFixed(1)}%`;
+    if (metric === "ftv") return `${(p.ftv * 100).toFixed(2)}%`;
+    if (metric === "v24h") return fmt(p.v24h);
+    return fmt(p.tvl);
+  };
+
+  return (
+    <table className="tbl">
+      <thead>
+        <tr>
+          <th style={{ width: 36 }}>#</th>
+          <th>交易对</th>
+          <th style={{ textAlign: "right" }}>TVL</th>
+          <th style={{ textAlign: "right" }}>{metricLabel}</th>
+          <th style={{ textAlign: "right" }}>24h</th>
+          <th style={{ width: 86 }}>7d</th>
+        </tr>
+      </thead>
+      <tbody>
+        {pools.slice(0, limit).map((p, i) => (
+          <tr key={p.addr || i}>
+            <td><div className={`rank ${i < 3 ? `top${i+1}` : ""}`}>{i+1}</div></td>
+            <td>
+              <div style={{ fontWeight: 600, fontSize: 13 }}>{p.name}</div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{BIZ_LABELS[p.biz] || p.biz}</div>
+            </td>
+            <td className="mono" style={{ textAlign: "right", fontWeight: 500 }}>{fmt(p.tvl)}</td>
+            <td className="mono" style={{ textAlign: "right", fontWeight: 500 }}>{fmtVal(p)}</td>
+            <td style={{ textAlign: "right" }}>
+              <span className={`pill ${chgClass(p.pc1d)}`}>
+                {chgArrow(p.pc1d)} {Math.abs((p.pc1d||0)*100).toFixed(1)}%
+              </span>
+            </td>
+            <td>
+              <Sparkline data={p.kline7d} color={p.pc7d >= 0 ? "var(--green)" : "var(--red)"} />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
+
+const BizSection = ({ bizLines, platform }) => {
+  if (!bizLines) return null;
+  const order = ["xStocks", "Gold_RWA", "Major", "Stablecoin", "Other"];
+  const items = order.map(k => ({ key: k, ...bizLines[k] })).filter(b => b.tvl > 0);
+
+  const pieData = items.map(b => ({
+    name: BIZ_LABELS[b.key],
+    value: b.tvl,
+    color: BIZ_COLORS[b.key],
+  }));
+
+  return (
+    <div className="grid-2">
+      <div className="card fade-up delay-2">
+        <div className="card-title"><span className="icon">📊</span> 业务线分布</div>
+        <div className="biz-cards">
+          {items.map(b => {
+            const share = platform.tvl > 0 ? (b.tvl / platform.tvl * 100) : 0;
+            return (
+              <div key={b.key} className="biz-card" style={{ borderLeft: `3px solid ${BIZ_COLORS[b.key]}` }}>
+                <div className="biz-card-name">{BIZ_ICONS[b.key]} {BIZ_LABELS[b.key]}</div>
+                <div className="biz-card-row"><span>TVL</span><span className="biz-card-val mono">{fmt(b.tvl)}</span></div>
+                <div className="biz-card-row"><span>24h 交易量</span><span className="biz-card-val mono">{fmt(b.vol24h)}</span></div>
+                <div className="biz-card-row"><span>手续费</span><span className="biz-card-val mono">{fmt(b.fee24h)}</span></div>
+                <div className="biz-card-row"><span>占比</span><span className="biz-card-val">{share.toFixed(1)}%</span></div>
+                <div className="biz-card-row"><span>池数</span><span className="biz-card-val">{b.count}</span></div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="card fade-up delay-3">
+        <div className="card-title"><span className="icon">🍩</span> TVL 占比</div>
+        <div style={{ width: "100%", height: 280 }}>
+          <ResponsiveContainer>
+            <PieChart>
+              <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                   innerRadius={60} outerRadius={100} paddingAngle={3} strokeWidth={0}>
+                {pieData.map((d, i) => <Cell key={i} fill={d.color} />)}
+              </Pie>
+              <Tooltip
+                contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 12 }}
+                formatter={(v) => fmt(v)}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", marginTop: 4 }}>
+          {pieData.map((d, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 3, background: d.color }} />
+              <span style={{ color: "var(--text-secondary)" }}>{d.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const XStocksPanel = ({ xStocks }) => {
+  if (!xStocks || !xStocks.length) return null;
+  return (
+    <div className="card fade-up delay-3" style={{ marginBottom: 24 }}>
+      <div className="card-title"><span className="icon">📈</span> xStocks 专区</div>
+      <table className="tbl">
+        <thead>
+          <tr>
+            <th>资产</th>
+            <th style={{ textAlign: "right" }}>价格</th>
+            <th style={{ textAlign: "right" }}>24h</th>
+            <th style={{ textAlign: "right" }}>TVL</th>
+            <th style={{ textAlign: "right" }}>24h 交易量</th>
+            <th style={{ textAlign: "right" }}>手续费</th>
+            <th>7d 趋势</th>
+          </tr>
+        </thead>
+        <tbody>
+          {xStocks.map((p, i) => (
+            <tr key={p.addr || i}>
+              <td style={{ fontWeight: 600 }}>{p.name}</td>
+              <td className="mono" style={{ textAlign: "right" }}>${p.px?.toFixed(2)}</td>
+              <td style={{ textAlign: "right" }}>
+                <span className={`pill ${chgClass(p.pc1d)}`}>
+                  {chgArrow(p.pc1d)} {Math.abs((p.pc1d||0)*100).toFixed(1)}%
+                </span>
+              </td>
+              <td className="mono" style={{ textAlign: "right" }}>{fmt(p.tvl)}</td>
+              <td className="mono" style={{ textAlign: "right" }}>{fmt(p.v24h)}</td>
+              <td className="mono" style={{ textAlign: "right" }}>{fmt(p.f24h)}</td>
+              <td>
+                <Sparkline data={p.kline7d} color={p.pc7d >= 0 ? "var(--green)" : "var(--red)"} w={72} h={24} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const CompetitorPanel = ({ competitors }) => {
+  if (!competitors) return null;
+  const items = Object.entries(competitors)
+    .map(([slug, d]) => ({ slug, ...d }))
+    .sort((a, b) => (b.tvl || 0) - (a.tvl || 0));
+  const maxTvl = Math.max(...items.map(c => c.tvl || 0), 1);
+  const maxVol = Math.max(...items.map(c => c.vol24h || 0), 1);
+
+  return (
+    <div className="card fade-up delay-4">
+      <div className="card-title"><span className="icon">🏆</span> 竞品对比 (Solana DEX)</div>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8, fontWeight: 600 }}>TVL</div>
+        {items.map(c => (
+          <div key={c.slug} className="comp-bar">
+            <div className="comp-bar-name" style={{ color: c.slug === "byreal" ? "var(--accent)" : "var(--text-secondary)", fontWeight: c.slug === "byreal" ? 700 : 400 }}>
+              {c.name} {c.slug === "byreal" ? "⭐" : ""}
+            </div>
+            <div className="comp-bar-track">
+              <div className="comp-bar-fill"
+                   style={{ width: `${Math.max((c.tvl || 0) / maxTvl * 100, 2)}%`, background: COMP_COLORS[c.slug] || "var(--text-muted)" }}>
+              </div>
+            </div>
+            <div className="comp-bar-val mono">{fmt(c.tvl || 0)}</div>
+          </div>
+        ))}
+      </div>
+      <div>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8, fontWeight: 600 }}>24h 交易量</div>
+        {items.map(c => (
+          <div key={c.slug} className="comp-bar">
+            <div className="comp-bar-name" style={{ color: c.slug === "byreal" ? "var(--accent)" : "var(--text-secondary)", fontWeight: c.slug === "byreal" ? 700 : 400 }}>
+              {c.name}
+            </div>
+            <div className="comp-bar-track">
+              <div className="comp-bar-fill"
+                   style={{ width: `${Math.max((c.vol24h || 0) / maxVol * 100, 2)}%`, background: COMP_COLORS[c.slug] || "var(--text-muted)" }}>
+              </div>
+            </div>
+            <div className="comp-bar-val mono">{fmt(c.vol24h || 0)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// App
+// ============================================================
+const App = () => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [rankTab, setRankTab] = useState("topTvl");
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        // 先尝试 HTTP 路径，然后备选相对路径
+        let resp;
+        for (const path of ["/data/latest/summary.json", "./data/latest/summary.json", "../data/latest/summary.json"]) {
+          try {
+            resp = await fetch(path);
+            if (resp.ok) break;
+          } catch (e) { continue; }
+        }
+
+        if (!resp || !resp.ok) {
+          // Demo 模式：尝试从 window.__DEMO_DATA__ 获取
+          if (window.__DEMO_DATA__) {
+            setData(window.__DEMO_DATA__);
+            setLoading(false);
+            return;
+          }
+          throw new Error("无法加载数据文件。请确认已运行 collect.py。");
+        }
+        const json = await resp.json();
+        setData(json);
+      } catch (e) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+    // 自动刷新（每5分钟）
+    const timer = setInterval(load, 5 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  if (loading) return (
+    <div className="dash-container">
+      <div className="header"><div className="header-left"><div className="header-logo">B</div><span className="header-title">Byreal Dashboard</span></div></div>
+      <div className="grid-kpi">{[...Array(6)].map((_, i) => <div key={i} className="kpi-card loading-shimmer" style={{ height: 90 }} />)}</div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="dash-container" style={{ paddingTop: 80, textAlign: "center" }}>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+      <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>数据加载失败</div>
+      <div style={{ color: "var(--text-muted)", fontSize: 14 }}>{error}</div>
+      <div style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 20 }}>
+        运行 <code className="mono" style={{ background: "var(--bg-card)", padding: "2px 8px", borderRadius: 4 }}>python3 collect.py</code> 生成数据后刷新页面
+      </div>
+    </div>
+  );
+
+  const p = data.platform;
+  const rankTabs = [
+    { key: "topTvl", label: "Top TVL" },
+    { key: "topVol", label: "Top 交易量" },
+    { key: "topFtv", label: "Top Fee/TVL" },
+    { key: "topApr", label: "Top APR" },
+  ];
+
+  return (
+    <div className="dash-container">
+      {/* Header */}
+      <div className="header fade-up">
+        <div className="header-left">
+          <div className="header-logo">B</div>
+          <div>
+            <div className="header-title">Byreal Ops Dashboard</div>
+            <div className="header-date">{data.date} · 数据更新于 {new Date(data.ts).toLocaleTimeString("zh-CN")}</div>
+          </div>
+        </div>
+        <div className="header-right">
+          <div className="status-dot" />
+          <div className="status-text">Live</div>
+        </div>
+      </div>
+
+      {/* Market Bar */}
+      <MarketBar market={data.market} />
+
+      {/* Alerts */}
+      {data.alerts && data.alerts.length > 0 && (
+        <div className="card fade-up delay-1" style={{ marginBottom: 24 }}>
+          <div className="card-title"><span className="icon">⚡</span> 每日行动项 ({data.alerts.length})</div>
+          <AlertPanel alerts={data.alerts} />
+        </div>
+      )}
+
+      {/* KPI */}
+      <div className="grid-kpi">
+        <KpiCard label="TVL" value={fmt(p.tvl)} sub={p.tvlChange != null ? fmtPct(p.tvlChange) + " vs 昨日" : null} subColor={chgColor(p.tvlChange)} delay={1} />
+        <KpiCard label="24h 交易量" value={fmt(p.vol24h)} sub={p.volChange != null ? fmtPct(p.volChange) + " vs 昨日" : null} subColor={chgColor(p.volChange)} delay={2} />
+        <KpiCard label="24h 手续费" value={fmt(p.fee24h)} delay={3} />
+        <KpiCard label="24h 协议收入" value={fmt(p.rev24h)} sub="fee × 12%" delay={4} />
+        <KpiCard label="7d 交易量" value={fmt(p.vol7d)} delay={4} />
+        <KpiCard label="活跃池 / 总池" value={`${p.active} / ${p.total}`} delay={5} />
+      </div>
+
+      {/* Biz Lines + Pie */}
+      <div className="section-title"><span>📊 业务线</span><div className="line" /></div>
+      <BizSection bizLines={data.bizLines} platform={p} />
+
+      {/* xStocks */}
+      <div className="section-title"><span>📈 xStocks 专区</span><div className="line" /></div>
+      <XStocksPanel xStocks={data.xStocks} />
+
+      {/* Pool Rankings */}
+      <div className="section-title"><span>🏅 池子排行</span><div className="line" /></div>
+      <div className="card fade-up delay-3" style={{ marginBottom: 24 }}>
+        <div className="tab-row">
+          {rankTabs.map(t => (
+            <button key={t.key} className={`tab-btn ${rankTab === t.key ? "active" : ""}`} onClick={() => setRankTab(t.key)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <PoolTable pools={data.rankings?.[rankTab] || []} metric={rankTab === "topVol" ? "v24h" : rankTab === "topFtv" ? "ftv" : rankTab === "topApr" ? "apr" : "tvl"} />
+      </div>
+
+      {/* Competitor */}
+      <div className="section-title"><span>🏆 竞品</span><div className="line" /></div>
+      <CompetitorPanel competitors={data.competitors} />
+
+      {/* Footer */}
+      <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 11, marginTop: 32, paddingBottom: 20 }}>
+        Byreal Ops Dashboard · 数据来源: Byreal API / CoinGecko / DefiLlama · 自动刷新: 5min
+      </div>
+    </div>
+  );
+};
+
+ReactDOM.render(<App />, document.getElementById("root"));
+</script>
+</body>
+</html>
