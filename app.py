@@ -187,6 +187,34 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# ━━━━ AI 总结 ━━━━
+ai_insight = data.get("aiInsight", "")
+ai_public = data.get("aiPublic", "")
+
+if ai_insight or ai_public:
+    ai_cols = st.columns(2)
+    with ai_cols[0]:
+        st.markdown('<div class="section-title">🧠 运营洞察</div>', unsafe_allow_html=True)
+        if ai_insight:
+            st.markdown(f"""
+            <div style="background:#111827; border:1px solid #22d3ee30; border-radius:12px; padding:1.2rem; line-height:1.8; font-size:0.95rem;">
+                {ai_insight}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown('<div style="color:#64748b;">暂无数据</div>', unsafe_allow_html=True)
+    
+    with ai_cols[1]:
+        st.markdown('<div class="section-title">📰 平台快报</div>', unsafe_allow_html=True)
+        if ai_public:
+            st.markdown(f"""
+            <div style="background:#111827; border:1px solid #10b98130; border-radius:12px; padding:1.2rem; line-height:1.8; font-size:0.95rem;">
+                {ai_public}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown('<div style="color:#64748b;">暂无数据</div>', unsafe_allow_html=True)
+
 # ━━━━ 预警 ━━━━
 red_alerts = [a for a in alerts if a["lv"] == "red"]
 orange_alerts = [a for a in alerts if a["lv"] == "orange"]

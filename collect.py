@@ -278,6 +278,121 @@ def generate_alerts(summary, market, yesterday):
 
 
 # ============================================================
+# AI 总结
+# ============================================================
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+
+# 尝试从 byreal-daily 的 .env 读取
+if not ANTHROPIC_API_KEY:
+    env_path = BASE_DIR.parent / "byreal-daily" / ".env"
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            if line.startswith("ANTHROPIC_API_KEY="):
+                ANTHROPIC_API_KEY = line.split("=", 1)[1].strip()
+                break
+
+
+def call_claude(prompt, max_tokens=1000):
+    """调用 Claude API"""
+    if not ANTHROPIC_API_KEY:
+        return ""
+    try:
+        payload = json.dumps({
+            "model": "claude-sonnet-4-20250514",
+            "max_tokens": max_tokens,
+            "messages": [{"role": "user", "content": prompt}],
+        }).encode("utf-8")
+
+        req = urllib.request.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": ANTHROPIC_API_KEY,
+                "anthropic-version": "2023-06-01",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+            return result.get("content", [{}])[0].get("text", "")
+    except Exception as e:
+        print(f"  [WARN] Claude API 失败: {e}")
+        return ""
+
+
+def generate_ai_summary(summary, market, comps, alerts):
+    """生成两段 AI 总结"""
+    p = summary["platform"]
+    sol = market.get("sol", {})
+    fng = market.get("fearGreed", {})
+
+    # 构建数据摘要给 AI
+    data_brief = f"""Byreal 平台数据（{datetime.now().strftime('%Y-%m-%d')}）:
+- TVL: ${p['tvl']/1e6:.2f}M | 24h Vol: ${p['vol24h']/1e6:.2f}M | 24h Fee: ${p['fee24h']:,.0f}
+- 活跃池: {p['active']}/{p['total']}
+- TVL 日变化: {p.get('tvlChange', 'N/A')} | Vol 日变化: {p.get('volChange', 'N/A')}
+
+业务线:
+"""
+    for k, v in summary.get("bizLines", {}).items():
+        share = v["tvl"] / p["tvl"] * 100 if p["tvl"] > 0 else 0
+        data_brief += f"  {k}: TVL ${v['tvl']/1e6:.2f}M ({share:.0f}%) | Vol ${v['vol24h']/1e6:.2f}M\n"
+
+    data_brief += f"""
+市场:
+- SOL: ${sol.get('price',0):.2f} ({sol.get('change24h',0):+.1f}%)
+- Fear & Greed: {fng.get('value', '?')} ({fng.get('label', '')})
+
+竞品 TVL:
+"""
+    for slug, c in sorted(comps.items(), key=lambda x: x[1].get("tvl", 0), reverse=True):
+        data_brief += f"  {c.get('name', slug)}: TVL ${c.get('tvl',0)/1e6:.1f}M | Vol ${c.get('vol24h',0)/1e6:.1f}M\n"
+
+    data_brief += "\n预警:\n"
+    for a in alerts:
+        data_brief += f"  [{a['lv']}] {a['msg']}\n"
+
+    # xStocks 行情
+    xs = summary.get("xStocks", [])
+    if xs:
+        data_brief += "\nxStocks 行情:\n"
+        for s in xs[:8]:
+            chg = s.get("pc1d", 0)
+            data_brief += f"  {s['name']}: ${s['px']:.2f} ({chg*100:+.1f}%) TVL ${s['tvl']/1e6:.2f}M\n"
+
+    # --- 内部运营洞察 ---
+    insight_prompt = f"""{data_brief}
+
+你是 Byreal（Solana native DEX）的运营分析师。基于以上数据，写一段简短的运营洞察（3-5 句话），包含：
+1. 今日平台整体表现判断
+2. 最值得关注的 1-2 个机会或风险
+3. 具体的运营行动建议
+
+要求：直接、有观点、可执行。不要客套话。中文回答。"""
+
+    # --- 对外平台快报 ---
+    public_prompt = f"""{data_brief}
+
+你是 Byreal（Solana native DEX）的内容运营。基于以上数据，写一段面向用户/客户的平台快报（3-4 句话），包含：
+1. 平台亮点数据
+2. 热门池子或 xStocks 机会
+3. 适合发推/社群的正面信息
+
+要求：积极专业、突出亮点、吸引用户参与。不要提风险预警。中文回答。"""
+
+    insight = call_claude(insight_prompt)
+    public = call_claude(public_prompt)
+
+    if insight:
+        print(f"  ✓ 运营洞察: {insight[:50]}...")
+    if public:
+        print(f"  ✓ 平台快报: {public[:50]}...")
+
+    return {"insight": insight, "public": public}
+
+
+# ============================================================
 # 主流程
 # ============================================================
 def main():
@@ -373,7 +488,11 @@ def main():
 
     alerts = generate_alerts(summary, market, yesterday_summary)
 
-    # --- 5. 合并输出 ---
+    # --- 5. AI 总结 ---
+    print("[4/4] AI 总结...")
+    ai_summary = generate_ai_summary(summary, market, comps, alerts)
+
+    # --- 6. 合并输出 ---
     final = {
         "date": today,
         "ts": datetime.now(timezone.utc).isoformat(),
@@ -381,6 +500,8 @@ def main():
         "market": market,
         "competitors": comps,
         "alerts": alerts,
+        "aiInsight": ai_summary.get("insight", ""),
+        "aiPublic": ai_summary.get("public", ""),
     }
 
     with open(today_dir / "summary.json", "w") as f:
