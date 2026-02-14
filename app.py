@@ -23,6 +23,37 @@ DATA_DIR = Path(__file__).parent / "data"
 
 
 # ============================================================
+# 自动采集（Streamlit Cloud 上没有本地数据）
+# ============================================================
+import subprocess
+import sys
+
+def auto_collect():
+    """如果没有最新数据，自动运行 collect.py"""
+    summary_path = DATA_DIR / "latest" / "summary.json"
+    if summary_path.exists():
+        # 检查数据是否是今天的
+        try:
+            with open(summary_path) as f:
+                d = json.load(f)
+            if d.get("date") == datetime.now().strftime("%Y-%m-%d"):
+                return  # 今天的数据已存在
+        except Exception:
+            pass
+    
+    with st.spinner("⏳ 正在采集数据，首次加载约需 30 秒..."):
+        collect_script = Path(__file__).parent / "collect.py"
+        result = subprocess.run(
+            [sys.executable, str(collect_script)],
+            capture_output=True, text=True, timeout=120
+        )
+        if result.returncode != 0:
+            st.error(f"采集失败: {result.stderr}")
+
+auto_collect()
+
+
+# ============================================================
 # 样式
 # ============================================================
 st.markdown("""
