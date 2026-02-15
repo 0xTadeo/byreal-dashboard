@@ -215,6 +215,41 @@ if ai_insight or ai_public:
         else:
             st.markdown('<div style="color:#64748b;">暂无数据</div>', unsafe_allow_html=True)
 
+# ━━━━ 运营日报 ━━━━
+daily_report_content = None
+daily_report_path = Path(f"/Users/martis/.openclaw/workspace/byreal-daily/daily-{data['date']}.txt")
+
+if daily_report_path.exists():
+    try:
+        with open(daily_report_path) as f:
+            daily_report_content = f.read()
+    except Exception:
+        pass
+
+# Streamlit Cloud fallback
+if not daily_report_content:
+    daily_report_content = """📋 运营日报 Mock Data
+
+**今日重点:**
+- [ ] 监控 TVL 变化
+- [ ] 关注 xStocks 波动
+- [ ] 准备社交媒体内容
+
+**待办事项:**
+1. 检查激励池状态
+2. 更新竞品数据
+3. 社区反馈收集
+
+_本地日报文件未找到，显示 mock 数据_
+"""
+
+with st.expander("📋 运营日报", expanded=False):
+    st.markdown(f"""
+    <div style="background:#111827; border:1px solid #1e293b; border-radius:12px; padding:1.2rem; line-height:1.8; font-size:0.9rem; white-space:pre-wrap; font-family:monospace;">
+{daily_report_content}
+    </div>
+    """, unsafe_allow_html=True)
+
 # ━━━━ 预警 ━━━━
 red_alerts = [a for a in alerts if a["lv"] == "red"]
 orange_alerts = [a for a in alerts if a["lv"] == "orange"]
@@ -356,6 +391,119 @@ if comp_rows:
         comp_html += '</tr>'
     comp_html += '</table>'
     st.markdown(comp_html, unsafe_allow_html=True)
+
+# ━━━━ X/Twitter 热点 ━━━━
+st.markdown('<div class="section-title">𝕏 Twitter 热点</div>', unsafe_allow_html=True)
+
+x_trends = data.get("xTrends", [])
+with st.expander(f"📱 X/Twitter 动态 ({len(x_trends)} 条)", expanded=True):
+    if x_trends:
+        for tweet in x_trends[:10]:
+            # 竞品推文橙色边框
+            border_color = "#f59e0b" if tweet.get("type") == "competitor" else "#1e293b"
+            type_emoji = {
+                "byreal": "⭐",
+                "competitor": "🔶",
+                "ecosystem": "🌐",
+                "kol": "👤"
+            }.get(tweet.get("type", ""), "")
+            
+            st.markdown(f"""
+            <div style="background:#111827; border:1px solid {border_color}; border-radius:8px; padding:1rem; margin:0.5rem 0;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+                    <span style="color:#22d3ee; font-weight:600;">{type_emoji} @{tweet['handle']}</span>
+                    <span style="color:#64748b; font-size:0.85rem;">{tweet.get('name', '')}</span>
+                </div>
+                <div style="color:#e2e8f0; margin:0.5rem 0; line-height:1.6;">
+                    {tweet.get('content', '')[:200]}{'...' if len(tweet.get('content', '')) > 200 else ''}
+                </div>
+                <div style="display:flex; gap:1.5rem; color:#64748b; font-size:0.85rem;">
+                    <span>❤️ {tweet.get('likes', 0):,}</span>
+                    <span>🔁 {tweet.get('retweets', 0):,}</span>
+                    <span>💬 {tweet.get('replies', 0):,}</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("📊 暂无 X/Twitter 数据 (等待真实 API 接入)")
+
+# ━━━━ Reddit 热点 ━━━━
+st.markdown('<div class="section-title">🔥 Reddit 热帖</div>', unsafe_allow_html=True)
+
+reddit_hot = data.get("redditHot", [])
+with st.expander(f"💬 Reddit 热门讨论 ({len(reddit_hot)} 条)", expanded=True):
+    if reddit_hot:
+        for post in reddit_hot[:10]:
+            # Byreal/Solana 相关帖子高亮
+            border_color = "#22d3ee" if post.get("isRelevant") else "#1e293b"
+            relevant_mark = "⭐ " if post.get("isRelevant") else ""
+            
+            st.markdown(f"""
+            <div style="background:#111827; border:1px solid {border_color}; border-radius:8px; padding:1rem; margin:0.5rem 0;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+                    <span style="color:#f59e0b; font-weight:600;">r/{post['subreddit']}</span>
+                    <span style="color:#64748b; font-size:0.85rem;">{post.get('flair', '')}</span>
+                </div>
+                <div style="color:#e2e8f0; font-weight:500; margin:0.5rem 0;">
+                    {relevant_mark}{post.get('title', '')}
+                </div>
+                <div style="display:flex; gap:1.5rem; color:#64748b; font-size:0.85rem;">
+                    <span>⬆️ {post.get('score', 0):,} ({post.get('upvoteRatio', 0)*100:.0f}%)</span>
+                    <span>💬 {post.get('numComments', 0):,} comments</span>
+                    <span style="color:#64748b;">by u/{post.get('author', '')}</span>
+                </div>
+                <a href="{post.get('url', '')}" target="_blank" style="color:#22d3ee; font-size:0.85rem; text-decoration:none;">🔗 查看讨论 →</a>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("📊 暂无 Reddit 数据")
+
+# ━━━━ Byreal 账号分析 ━━━━
+st.markdown('<div class="section-title">📊 @byreal_io 账号分析</div>', unsafe_allow_html=True)
+
+byreal_acc = data.get("byrealAccount", {})
+acc_cols = st.columns(4)
+
+acc_metrics = [
+    ("Followers", f"{byreal_acc.get('followers', 0):,}" if byreal_acc.get('followers') else "待接入", 
+     f"+{byreal_acc.get('followersChange7d', 0):,} (7d)" if byreal_acc.get('followersChange7d') else None),
+    ("推文数 (7d)", f"{byreal_acc.get('tweets7d', 0):,}" if byreal_acc.get('tweets7d') else "—", None),
+    ("平均互动率", f"{byreal_acc.get('avgEngagement', 0):.1f}%" if byreal_acc.get('avgEngagement') else "—", None),
+    ("状态", "🟢 活跃" if byreal_acc.get('tweets7d', 0) > 0 else "🟡 待更新", None),
+]
+
+for col, (label, value, change) in zip(acc_cols, acc_metrics):
+    with col:
+        change_html = ""
+        if change:
+            color = "#10b981"
+            change_html = f'<div style="color:{color} !important; font-size:0.85rem;">{change}</div>'
+        
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value" style="font-size:1.4rem;">{value}</div>
+            <div class="metric-label">{label}</div>
+            {change_html}
+        </div>
+        """, unsafe_allow_html=True)
+
+# 最近推文表现
+recent_tweets = byreal_acc.get("recentTweets", [])
+if recent_tweets:
+    st.markdown('<div style="margin-top:1rem; color:#94a3b8; font-size:0.9rem; font-weight:600;">最近推文表现</div>', unsafe_allow_html=True)
+    for tw in recent_tweets[:5]:
+        st.markdown(f"""
+        <div style="background:#111827; border:1px solid #1e293b; border-radius:6px; padding:0.8rem; margin:0.3rem 0;">
+            <div style="color:#e2e8f0; font-size:0.9rem; margin-bottom:0.3rem;">{tw.get('content', '')[:100]}...</div>
+            <div style="display:flex; gap:1rem; color:#64748b; font-size:0.8rem;">
+                <span>❤️ {tw.get('likes', 0):,}</span>
+                <span>🔁 {tw.get('retweets', 0):,}</span>
+                <span>💬 {tw.get('replies', 0):,}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+else:
+    st.info("📊 等待接入真实 X API 数据")
 
 # ━━━━ xStocks ━━━━
 xs = data.get("xStocks", [])

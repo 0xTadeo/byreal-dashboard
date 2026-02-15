@@ -14,6 +14,15 @@ import urllib.error
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+# 导入新增的采集模块
+try:
+    from collect_x_trends import fetch_x_trends
+    from collect_reddit import fetch_reddit_hot
+except ImportError:
+    print("[WARN] 无法导入 X/Reddit 采集模块，将跳过")
+    fetch_x_trends = None
+    fetch_reddit_hot = None
+
 # ============================================================
 # 配置
 # ============================================================
@@ -488,11 +497,44 @@ def main():
 
     alerts = generate_alerts(summary, market, yesterday_summary)
 
-    # --- 5. AI 总结 ---
-    print("[4/4] AI 总结...")
+    # --- 5. X/Twitter 热点 ---
+    print("[4/7] X/Twitter 热点...")
+    x_trends = []
+    if fetch_x_trends:
+        try:
+            x_trends = fetch_x_trends()
+        except Exception as e:
+            print(f"  [WARN] X 采集失败: {e}")
+    else:
+        print("  ✗ 跳过（模块未加载）")
+
+    # --- 6. Reddit 热点 ---
+    print("[5/7] Reddit 热帖...")
+    reddit_hot = []
+    if fetch_reddit_hot:
+        try:
+            reddit_hot = fetch_reddit_hot()
+        except Exception as e:
+            print(f"  [WARN] Reddit 采集失败: {e}")
+    else:
+        print("  ✗ 跳过（模块未加载）")
+
+    # --- 7. AI 总结 ---
+    print("[6/7] AI 总结...")
     ai_summary = generate_ai_summary(summary, market, comps, alerts)
 
-    # --- 6. 合并输出 ---
+    # --- 8. Byreal 账号分析 (mock data) ---
+    print("[7/7] Byreal 账号分析 (mock)...")
+    byreal_account = {
+        "handle": "@byreal_io",
+        "followers": 0,  # TODO: 真实 API
+        "followersChange7d": 0,
+        "tweets7d": 0,
+        "avgEngagement": 0,
+        "recentTweets": [],  # 最近推文表现
+    }
+
+    # --- 9. 合并输出 ---
     final = {
         "date": today,
         "ts": datetime.now(timezone.utc).isoformat(),
@@ -502,6 +544,9 @@ def main():
         "alerts": alerts,
         "aiInsight": ai_summary.get("insight", ""),
         "aiPublic": ai_summary.get("public", ""),
+        "xTrends": x_trends,
+        "redditHot": reddit_hot,
+        "byrealAccount": byreal_account,
     }
 
     with open(today_dir / "summary.json", "w") as f:
