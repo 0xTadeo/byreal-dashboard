@@ -519,12 +519,27 @@ def main():
     else:
         print("  ✗ 跳过（模块未加载）")
 
+    # --- 7. 读取本地运营日报 ---
+    print("[6.5/7] 读取运营日报...")
+    daily_report = ""
+    daily_paths = [
+        Path.home() / ".openclaw" / "workspace" / "byreal-daily" / f"daily-{today}.txt",
+        BASE_DIR.parent / "byreal-daily" / f"daily-{today}.txt",
+    ]
+    for dp in daily_paths:
+        if dp.exists():
+            daily_report = dp.read_text(encoding="utf-8")
+            print(f"  ✓ 读取日报: {dp}")
+            break
+    if not daily_report:
+        print("  ✗ 未找到今日日报")
+
     # --- 7. AI 总结 ---
-    print("[6/7] AI 总结...")
+    print("[7/7] AI 总结...")
     ai_summary = generate_ai_summary(summary, market, comps, alerts)
 
     # --- 8. Byreal 账号分析 (mock data) ---
-    print("[7/7] Byreal 账号分析 (mock)...")
+    print("[8/8] Byreal 账号分析 (mock)...")
     byreal_account = {
         "handle": "@byreal_io",
         "followers": 0,  # TODO: 真实 API
@@ -544,6 +559,7 @@ def main():
         "alerts": alerts,
         "aiInsight": ai_summary.get("insight", ""),
         "aiPublic": ai_summary.get("public", ""),
+        "dailyReport": daily_report,
         "xTrends": x_trends,
         "redditHot": reddit_hot,
         "byrealAccount": byreal_account,

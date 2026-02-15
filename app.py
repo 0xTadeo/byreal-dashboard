@@ -216,32 +216,20 @@ if ai_insight or ai_public:
             st.markdown('<div style="color:#64748b;">暂无数据</div>', unsafe_allow_html=True)
 
 # ━━━━ 运营日报 ━━━━
-daily_report_content = None
-daily_report_path = Path(f"/Users/martis/.openclaw/workspace/byreal-daily/daily-{data['date']}.txt")
+daily_report_content = data.get("dailyReport", "")
 
-if daily_report_path.exists():
-    try:
-        with open(daily_report_path) as f:
-            daily_report_content = f.read()
-    except Exception:
-        pass
-
-# Streamlit Cloud fallback
 if not daily_report_content:
-    daily_report_content = """📋 运营日报 Mock Data
+    # fallback: 尝试本地文件
+    daily_report_path = Path(f"/Users/martis/.openclaw/workspace/byreal-daily/daily-{data['date']}.txt")
+    if daily_report_path.exists():
+        try:
+            with open(daily_report_path) as f:
+                daily_report_content = f.read()
+        except Exception:
+            pass
 
-**今日重点:**
-- [ ] 监控 TVL 变化
-- [ ] 关注 xStocks 波动
-- [ ] 准备社交媒体内容
-
-**待办事项:**
-1. 检查激励池状态
-2. 更新竞品数据
-3. 社区反馈收集
-
-_本地日报文件未找到，显示 mock 数据_
-"""
+if not daily_report_content:
+    daily_report_content = "_暂无今日日报数据_"
 
 with st.expander("📋 运营日报", expanded=False):
     st.markdown(f"""
