@@ -656,8 +656,9 @@ if len(hist) >= 2:
     
     with trend_tab2:
         biz_cols = [c for c in df.columns if c.endswith(" TVL")]
-        if biz_cols:
-            df_biz = df.melt(id_vars=["日期"], value_vars=biz_cols, var_name="业务线", value_name="TVL")
+        if biz_cols and "日期" in df.columns:
+            df_melt = df[["日期"] + biz_cols].copy()
+            df_biz = df_melt.melt(id_vars=["日期"], value_vars=biz_cols, var_name="业务线", value_name="TVL")
             chart = alt.Chart(df_biz).mark_area(opacity=0.7).encode(
                 x=alt.X("日期:T", title=""),
                 y=alt.Y("TVL:Q", title="TVL ($)", stack=True, axis=alt.Axis(format="~s")),
