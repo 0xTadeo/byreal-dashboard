@@ -1,1 +1,50 @@
-[]
+[
+  {
+    "handle": "CryptoHayes",
+    "name": "Arthur Hayes",
+    "type": "kol",
+    "content": "继续加仓 HYPE — 通过 Gate 交易所购入 16,434 枚 HYPE（Hyperliquid 生态代币）。对 ETH 持看空观点，认为需等流动性环境改善。",
+    "likes": 0,
+    "retweets": 0,
+    "replies": 0,
+    "views": 0,
+    "timestamp": "2026-02-16T16:00:00+08:00",
+    "url": "https://x.com/CryptoHayes"
+  },
+  {
+    "handle": "toly",
+    "name": "Anatoly Yakovenko",
+    "type": "ecosystem",
+    "content": "被任命为 CFTC 创新咨询委员会成员。Percolator 永续合约框架部署中。引用 McAfee 论断，指出 NVIDIA H200 已涨至 $40,000。",
+    "likes": 0,
+    "retweets": 0,
+    "replies": 0,
+    "views": 0,
+    "timestamp": "2026-02-15T12:00:00+08:00",
+    "url": "https://x.com/toly"
+  },
+  {
+    "handle": "colinwu",
+    "name": "Colin Wu",
+    "type": "kol",
+    "content": "香港共识大会 AMA：「币圈完蛋了？」探讨当前市场悲观情绪，嘉宾包括 DeFi Teddy、Haotian、Leon Liu 等。",
+    "likes": 0,
+    "retweets": 0,
+    "replies": 0,
+    "views": 0,
+    "timestamp": "2026-02-16T08:00:00+08:00",
+    "url": "https://x.com/colinwu"
+  },
+  {
+    "handle": "JupiterExchange",
+    "name": "Jupiter",
+    "type": "competitor",
+    "content": "Solana 集成 SushiSwap 为原生 DEX，路由通过 Jupiter 聚合器处理，进一步巩固 Solana DEX 默认前端地位。",
+    "likes": 0,
+    "retweets": 0,
+    "replies": 0,
+    "views": 0,
+    "timestamp": "2026-02-13T12:00:00+08:00",
+    "url": "https://x.com/JupiterExchange"
+  }
+]
