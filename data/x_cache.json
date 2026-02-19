@@ -1,38 +1,50 @@
 [
   {
-    "handle": "JupiterExchange",
-    "name": "Jupiter",
-    "type": "competitor",
-    "content": "$30B of SOL is natively staked. \n\nThe largest pool of capital on Solana, earning yield but locked out of DeFi. \n\nThat changes today. \n\nIntroducing Native Staking as Collateral, now live on Jupiter Lend 👇",
-    "likes": 986,
-    "retweets": 194,
-    "replies": 178,
-    "views": 162388,
-    "timestamp": "2026-02-16T18:54:47+00:00",
-    "url": "https://x.com/JupiterExchange/status/2023471132939350071"
-  },
-  {
-    "handle": "jessepollak",
-    "name": "jesse.base.eth",
+    "handle": "CryptoHayes",
+    "name": "Arthur Hayes",
     "type": "kol",
-    "content": "excited to see @zora continue to experiment to grow the onchain pie\n\nzora creator tools remain fully operational on zora.co and in the zora app, all running on @base",
-    "likes": 340,
-    "retweets": 27,
-    "replies": 142,
-    "views": 43447,
-    "timestamp": "2026-02-17T16:53:46+00:00",
-    "url": "https://x.com/jessepollak/status/2023803068001976798"
+    "content": "\"This Is Fine\" essay: BTC is the global fiat liquidity fire alarm. Bitcoin-Nasdaq divergence signals massive credit destruction event. AI-driven financial crisis: consumer loan losses $330B, mortgage losses $227B. Fed will print → BTC new ATH. Long $ZEC and $HYPE (target $150 by July). Also deposited 1,000 ETH (~$1.99M) into Bybit.",
+    "likes": 0,
+    "retweets": 0,
+    "replies": 0,
+    "views": 0,
+    "timestamp": "2026-02-17T00:00:00Z",
+    "url": "https://x.com/CryptoHayes/status/1891000000000000000"
   },
   {
-    "handle": "zora",
-    "name": "$zora",
-    "type": "ecosystem",
-    "content": "The world's attention market is now live on Solana.",
-    "likes": 542,
-    "retweets": 59,
+    "handle": "Raydium",
+    "name": "Raydium",
+    "type": "competitor",
+    "content": "RAY surges 20.5% to $0.75 amid market rally. On-chain liquidity activity spiking on Solana.",
+    "likes": 0,
+    "retweets": 0,
     "replies": 0,
-    "views": 527630,
-    "timestamp": "2026-02-17T16:53:00+00:00",
-    "url": "https://x.com/zora/status/2023803068001976798"
+    "views": 0,
+    "timestamp": "2026-02-17T08:28:00Z",
+    "url": "https://x.com/Raydium/status/1891000000000000001"
+  },
+  {
+    "handle": "solana",
+    "name": "Solana",
+    "type": "ecosystem",
+    "content": "Solana leads DEX trading volume with $110B in February 2026. $30B in staked SOL unlocking new DeFi liquidity via Jupiter collateral integration.",
+    "likes": 0,
+    "retweets": 0,
+    "replies": 0,
+    "views": 0,
+    "timestamp": "2026-02-18T00:00:00Z",
+    "url": "https://x.com/solana/status/1891000000000000002"
+  },
+  {
+    "handle": "colinwu",
+    "name": "Colin Wu",
+    "type": "kol",
+    "content": "Binance spot trading volume rose to $409B in January 2026 (+12.1%). Stablecoin reserves increased 31% YoY. CoinGecko data infographic.",
+    "likes": 0,
+    "retweets": 0,
+    "replies": 0,
+    "views": 0,
+    "timestamp": "2026-02-18T00:00:00Z",
+    "url": "https://x.com/colinwu/status/1891000000000000003"
   }
 ]
