@@ -569,11 +569,15 @@ def main():
     with open(today_dir / "summary.json", "w") as f:
         json.dump(final, f, ensure_ascii=False, indent=2)
 
-    # latest 软链
+    # latest 目录（用复制代替 symlink，兼容 Streamlit Cloud）
+    import shutil
     latest = DATA_DIR / "latest"
     if latest.exists() or latest.is_symlink():
-        latest.unlink()
-    latest.symlink_to(today_dir.resolve())
+        if latest.is_symlink():
+            latest.unlink()
+        else:
+            shutil.rmtree(latest)
+    shutil.copytree(today_dir, latest)
 
     print(f"\n✅ 数据已保存: {today_dir}/")
     print(f"📋 {len(alerts)} 条预警:")
