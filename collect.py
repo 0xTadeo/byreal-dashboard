@@ -275,6 +275,7 @@ def generate_alerts(summary, market, yesterday):
         curr_vol = summary.get("platform", {}).get("vol24h", 0)
         if prev_vol > 0:
             summary["platform"]["volChange"] = (curr_vol - prev_vol) / prev_vol
+            summary["platform"]["vol24h_prev"] = prev_vol
 
         # 新池检测
         prev_addrs = {p["addr"] for p in yesterday.get("pools", [])}
@@ -340,7 +341,7 @@ def generate_ai_summary(summary, market, comps, alerts):
     data_brief = f"""Byreal 平台数据（{datetime.now().strftime('%Y-%m-%d')}）:
 - TVL: ${p['tvl']/1e6:.2f}M | 24h Vol: ${p['vol24h']/1e6:.2f}M | 24h Fee: ${p['fee24h']:,.0f}
 - 活跃池: {p['active']}/{p['total']}
-- TVL 日变化: {p.get('tvlChange', 'N/A')} | Vol 日变化: {p.get('volChange', 'N/A')}
+- 昨日 24h Vol: ${p.get('vol24h_prev', 0)/1e6:.2f}M | TVL 日变化: {'+' if p.get('tvlChange', 0) >= 0 else ''}{(p.get('tvlChange', 0) or 0)*100:.1f}% | Vol 日变化: {'+' if p.get('volChange', 0) >= 0 else ''}{(p.get('volChange', 0) or 0)*100:.1f}%
 
 业务线:
 """

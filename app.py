@@ -243,14 +243,49 @@ red_alerts = [a for a in alerts if a["lv"] == "red"]
 orange_alerts = [a for a in alerts if a["lv"] == "orange"]
 green_alerts = [a for a in alerts if a["lv"] == "green"]
 
-if red_alerts or orange_alerts:
+if red_alerts or orange_alerts or green_alerts:
     st.markdown('<div class="section-title">⚠️ 行动项</div>', unsafe_allow_html=True)
-    for a in red_alerts:
-        st.markdown(f'<div class="alert-red">🔴 {a["msg"]}</div>', unsafe_allow_html=True)
-    for a in orange_alerts:
-        st.markdown(f'<div class="alert-orange">🟠 {a["msg"]}</div>', unsafe_allow_html=True)
-    for a in green_alerts:
-        st.markdown(f'<div class="alert-green">🟢 {a["msg"]}</div>', unsafe_allow_html=True)
+
+    # 按类别分组合并，减少版面占用
+    from collections import defaultdict
+    grouped = defaultdict(list)
+    for a in red_alerts + orange_alerts + green_alerts:
+        grouped[a.get("cat", "other")].append(a)
+
+    for cat, items in grouped.items():
+        if cat == "reward" and len(items) > 1:
+            # 激励到期：合并成一行汇总 + 折叠详情
+            names_by_days = defaultdict(list)
+            for a in items:
+                # 从 msg 提取天数和池名
+                msg = a["msg"]
+                import re
+                m = re.match(r"(.+?) 激励 (\d+) 天后到期", msg)
+                if m:
+                    names_by_days[m.group(2)].append(m.group(1))
+                else:
+                    names_by_days["?"].append(msg)
+            summary_parts = []
+            for days, names in sorted(names_by_days.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 99):
+                summary_parts.append(f"**{days}天内到期({len(names)}个):** {', '.join(names)}")
+            st.markdown(f'<div class="alert-red">🔴 激励到期提醒 — 共 {len(items)} 个池子需续期</div>', unsafe_allow_html=True)
+            with st.expander(f"查看详情", expanded=False):
+                for part in summary_parts:
+                    st.markdown(part)
+
+        elif cat == "pool" and len(items) > 1:
+            # 高APR：合并成一行
+            pool_info = []
+            for a in items:
+                pool_info.append(a["msg"].replace("，注意监控", ""))
+            st.markdown(f'<div class="alert-orange">🟠 异常高 APR ({len(items)}个池子): {" | ".join(pool_info)}</div>', unsafe_allow_html=True)
+
+        else:
+            # 其他类别正常逐条显示
+            for a in items:
+                lv = a["lv"]
+                icon = {"red": "🔴", "orange": "🟠", "green": "🟢"}.get(lv, "⚪")
+                st.markdown(f'<div class="alert-{lv}">{icon} {a["msg"]}</div>', unsafe_allow_html=True)
 
 # ━━━━ 平台概览 ━━━━
 st.markdown('<div class="section-title">📊 平台概览</div>', unsafe_allow_html=True)
@@ -669,6 +704,6 @@ else:
 # Footer
 st.markdown("""
 <div style="text-align:center; color:#64748b !important; margin-top:3rem; padding:1rem; border-top:1px solid #1e293b; font-size:0.8rem;">
-    Byreal Ops Dashboard · Data refreshed daily at 09:00 UTC+8
+    Byreal Ops Dashboard · Data refreshed 3x daily at 09:20 / 13:00 / 18:00 UTC+8
 </div>
 """, unsafe_allow_html=True)
