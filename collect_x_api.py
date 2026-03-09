@@ -360,13 +360,16 @@ def fetch_all():
     # Sort by engagement score
     all_tweets.sort(key=lambda x: (x.get("likes", 0) + x.get("retweets", 0) * 3 + x.get("quotes", 0) * 2), reverse=True)
 
+    total_cost = cost1 + cost2 + cost_kol + cost3
+
     # Build output with metadata
     output = {
         "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "total_tweets": len(all_tweets),
-        "total_cost": cost1 + cost2 + cost3,
+        "total_cost": total_cost,
         "sections": {
             "account_tweets": len(account_tweets),
+            "kol_search": len(kol_tweets),
             "hot_topics": len(hot_tweets),
             "competitor_buzz": len(competitor_tweets),
         },
@@ -378,10 +381,10 @@ def fetch_all():
     with open(OUTPUT_PATH, "w") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
 
-    total_cost = cost1 + cost2 + cost3
     print(f"\n{'='*50}")
     print(f"✅ 采集完成!")
     print(f"  📝 账号推文: {len(account_tweets)}")
+    print(f"  👤 KOL 补采: {len(kol_tweets)}")
     print(f"  🔥 行业热点: {len(hot_tweets)}")
     print(f"  🏷️ 竞品舆情: {len(competitor_tweets)}")
     print(f"  📊 总计: {len(all_tweets)} tweets (去重后)")
